@@ -5,13 +5,15 @@ import { useState, useEffect } from 'react';
 export interface Settings {
   openaiApiKey: string;
   geminiApiKey: string;
-  selectedModel: 'openai' | 'gemini';
+  selectedModel: 'openai' | 'gemini'; // This is for TEXT generation
+  imageModel: 'dall-e-3' | 'image1-low' | 'image1-medium' | 'gemini-2.5-flash-image';
 }
 
 const DEFAULT_SETTINGS: Settings = {
   openaiApiKey: '',
   geminiApiKey: '',
   selectedModel: 'gemini',
+  imageModel: 'gemini-2.5-flash-image',
 };
 
 export function useSettings() {
