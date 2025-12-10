@@ -55,7 +55,8 @@ export default function Home() {
   };
 
   const handleGenerateImages = async () => {
-    const productsToGenerate = products.filter(p => p.generatedPrompt && !p.imageUrl);
+    // Include products that have a prompt OR just a name (use name as fallback prompt)
+    const productsToGenerate = products.filter(p => (p.generatedPrompt || p.name) && !p.imageUrl);
     if (productsToGenerate.length === 0) return;
 
     setIsGeneratingImages(true);
@@ -63,7 +64,9 @@ export default function Home() {
     for (const product of productsToGenerate) {
       updateProduct(product.id, { status: 'generating_image' });
       try {
-        const imageUrl = await generateImage(product.generatedPrompt, settings);
+        // Use generatedPrompt if available, otherwise use product name
+        const promptToUse = product.generatedPrompt || product.name;
+        const imageUrl = await generateImage(promptToUse, settings);
         updateProduct(product.id, { imageUrl, status: 'completed' });
       } catch (e: any) {
         updateProduct(product.id, { status: 'error', error: e.message });
