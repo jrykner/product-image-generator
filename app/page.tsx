@@ -137,7 +137,8 @@ export default function Home() {
 
       try {
         let blob: Blob | null = null;
-        const filename = product.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.png';
+        // Use product name as filename, only remove characters that are invalid for filenames
+        const filename = product.name.replace(/[<>:"/\\|?*]/g, '').trim() + '.png';
 
         // Check if it's a data URL
         if (product.imageUrl.startsWith('data:')) {
