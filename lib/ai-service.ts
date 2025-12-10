@@ -48,20 +48,41 @@ export async function generateImage(
             const openai = new OpenAI({ apiKey: settings.openaiApiKey, dangerouslyAllowBrowser: true });
 
             let modelId = 'dall-e-3';
+            let useBase64 = false;
 
             if (imageModel === 'image1-low') {
                 modelId = 'gpt-image-1-mini';
+                useBase64 = true;
             } else if (imageModel === 'image1-medium') {
                 modelId = 'gpt-image-1';
+                useBase64 = true;
             }
 
-            const response = await openai.images.generate({
-                model: modelId,
-                prompt: prompt,
-                n: 1,
-                size: "1024x1024",
-            });
-            return response.data?.[0]?.url || "";
+            if (useBase64) {
+                // gpt-image-1 models return base64 by default
+                const response = await openai.images.generate({
+                    model: modelId,
+                    prompt: prompt,
+                    n: 1,
+                    size: "1024x1024",
+                });
+                // The response contains b64_json in the data array
+                const b64Data = response.data?.[0]?.b64_json;
+                if (b64Data) {
+                    return `data:image/png;base64,${b64Data}`;
+                }
+                // Fallback to URL if available
+                return response.data?.[0]?.url || "";
+            } else {
+                // DALL-E 3 returns URL
+                const response = await openai.images.generate({
+                    model: modelId,
+                    prompt: prompt,
+                    n: 1,
+                    size: "1024x1024",
+                });
+                return response.data?.[0]?.url || "";
+            }
         } else {
             // For all other models (Gemini / Image1), we use Google Gen AI SDK
             if (!settings.geminiApiKey) throw new Error("Gemini API Key is missing");
