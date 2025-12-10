@@ -50,9 +50,9 @@ export async function generateImage(
             let modelId = 'dall-e-3';
 
             if (imageModel === 'image1-low') {
-                modelId = 'gpt-image-1.5-mini';
+                modelId = 'gpt-image-1-mini';
             } else if (imageModel === 'image1-medium') {
-                modelId = 'gpt-image-1.5';
+                modelId = 'gpt-image-1';
             }
 
             const response = await openai.images.generate({
