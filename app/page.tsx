@@ -30,6 +30,10 @@ export default function Home() {
     setProducts(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
   };
 
+  const deleteProduct = (id: string) => {
+    setProducts(prev => prev.filter(p => p.id !== id));
+  };
+
   const handleGeneratePrompts = async () => {
     if (products.length === 0) return;
     setIsGeneratingPrompts(true);
@@ -75,19 +79,80 @@ export default function Home() {
     const zip = new JSZip();
     const imgFolder = zip.folder("images");
 
-    // We need to fetch the images to blob to zip them
-    // Note: This might hit CORS issues if the image URL doesn't allow it.
-    // OpenAI URLs usually expire and might have CORS.
-    // We'll try to fetch.
+    if (!imgFolder) return;
+
+    // Helper function to convert data URL to Blob
+    const dataURLtoBlob = (dataURL: string): Blob => {
+      const arr = dataURL.split(',');
+      const mimeMatch = arr[0].match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : 'image/png';
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new Blob([u8arr], { type: mime });
+    };
+
+    // Helper function to fetch blob from URL with CORS handling
+    const fetchImageBlob = async (url: string): Promise<Blob | null> => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return await response.blob();
+      } catch (e) {
+        console.error('Fetch failed, trying no-cors fallback:', e);
+        // For CORS issues, we can't really fetch the blob directly
+        // But we can try creating an image element and using canvas
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              canvas.toBlob((blob) => {
+                resolve(blob);
+              }, 'image/png');
+            } else {
+              resolve(null);
+            }
+          };
+          img.onerror = () => {
+            console.error('Image load failed for URL:', url);
+            resolve(null);
+          };
+          img.src = url;
+        });
+      }
+    };
 
     const promises = completedProducts.map(async (product) => {
-      if (!product.imageUrl || !imgFolder) return;
+      if (!product.imageUrl) return;
+
       try {
-        const response = await fetch(product.imageUrl);
-        const blob = await response.blob();
-        // Clean filename
+        let blob: Blob | null = null;
         const filename = product.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.png';
-        imgFolder.file(filename, blob);
+
+        // Check if it's a data URL
+        if (product.imageUrl.startsWith('data:')) {
+          blob = dataURLtoBlob(product.imageUrl);
+        } else {
+          // It's a regular URL, fetch it
+          blob = await fetchImageBlob(product.imageUrl);
+        }
+
+        if (blob && blob.size > 0) {
+          imgFolder.file(filename, blob);
+        } else {
+          console.error(`Empty or null blob for ${product.name}`);
+        }
       } catch (e) {
         console.error(`Failed to download image for ${product.name}`, e);
       }
@@ -185,6 +250,7 @@ export default function Home() {
                 <ProductTable
                   products={products}
                   onUpdateProduct={updateProduct}
+                  onDeleteProduct={deleteProduct}
                   onGeneratePrompts={handleGeneratePrompts}
                   onGenerateImages={handleGenerateImages}
                   isGeneratingPrompts={isGeneratingPrompts}

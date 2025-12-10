@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Image as ImageIcon, CheckCircle, AlertCircle, Trash2 } from 'lucide-react';
 
 interface ProductTableProps {
     products: Product[];
     onUpdateProduct: (id: string, updates: Partial<Product>) => void;
+    onDeleteProduct: (id: string) => void;
     onGeneratePrompts: () => void;
     onGenerateImages: () => void;
     isGeneratingPrompts: boolean;
@@ -18,6 +19,7 @@ interface ProductTableProps {
 export function ProductTable({
     products,
     onUpdateProduct,
+    onDeleteProduct,
     onGeneratePrompts,
     onGenerateImages,
     isGeneratingPrompts,
@@ -69,6 +71,9 @@ export function ProductTable({
                                 <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                                     Image
                                 </th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    Actions
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200 bg-white">
@@ -102,6 +107,15 @@ export function ProductTable({
                                                 <ImageIcon className="h-6 w-6" />
                                             </div>
                                         )}
+                                    </td>
+                                    <td className="whitespace-nowrap px-6 py-4">
+                                        <button
+                                            onClick={() => onDeleteProduct(product.id)}
+                                            className="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                            title="Remove product"
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </button>
                                     </td>
                                 </tr>
                             ))}
