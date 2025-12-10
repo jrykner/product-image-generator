@@ -95,41 +95,37 @@ export default function Home() {
       return new Blob([u8arr], { type: mime });
     };
 
-    // Helper function to fetch blob from URL with CORS handling
+    // Helper function to fetch blob from URL using server-side proxy
     const fetchImageBlob = async (url: string): Promise<Blob | null> => {
       try {
+        // First try direct fetch (works for same-origin or CORS-enabled URLs)
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
         return await response.blob();
       } catch (e) {
-        console.error('Fetch failed, trying no-cors fallback:', e);
-        // For CORS issues, we can't really fetch the blob directly
-        // But we can try creating an image element and using canvas
-        return new Promise((resolve) => {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.naturalWidth;
-            canvas.height = img.naturalHeight;
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0);
-              canvas.toBlob((blob) => {
-                resolve(blob);
-              }, 'image/png');
-            } else {
-              resolve(null);
-            }
-          };
-          img.onerror = () => {
-            console.error('Image load failed for URL:', url);
-            resolve(null);
-          };
-          img.src = url;
-        });
+        console.error('Direct fetch failed, using proxy:', e);
+        // Use server-side proxy to bypass CORS
+        try {
+          const proxyResponse = await fetch('/api/proxy-image', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url }),
+          });
+
+          if (!proxyResponse.ok) {
+            const errorData = await proxyResponse.json();
+            throw new Error(errorData.error || 'Proxy fetch failed');
+          }
+
+          return await proxyResponse.blob();
+        } catch (proxyError) {
+          console.error('Proxy fetch also failed:', proxyError);
+          return null;
+        }
       }
     };
 
